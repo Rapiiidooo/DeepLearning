@@ -1,4 +1,7 @@
 import datetime
+import getopt
+import os
+import sys
 import time
 
 from classification_keras import gen_model, generate_more_data
@@ -17,16 +20,25 @@ def double_data(path):
     generate_more_data(path, 1)
 
 
-def main():
+def usage():
+    print('python3 ', os.path.basename(__file__), " [\"list\" \"of\" \"argument about the\" \"categories researched\"]")
+
+
+def main(argv):
+    try:
+        opts, args = getopt.getopt(argv, "hg:d", ["help", "grammar="])
+        if len(args) < 1:
+            usage()
+            sys.exit(2)
+    except getopt.GetoptError:
+        usage()
+        sys.exit(2)
+
     start_time = time.time()
 
-    targets = [
-        'Daisy flower',  # 'Fleur Marguerite',
-        'Dandelion flower',  # 'Fleur Pissenlit ',
-        'Rose flower',  # 'Fleur Rose',
-        'Sunflower flower',  # 'Fleur Tournesol',
-        'Tulip flower',  # 'Fleur Tulipe'
-    ]
+    targets = []
+    for arg in args:
+        targets.append(arg)
 
     nb_images = 0
     for i, key in enumerate(targets):
@@ -72,4 +84,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
