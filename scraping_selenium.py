@@ -49,6 +49,8 @@ def download_all(directory, file):
 
     my_mkdir(directory)
     i = 0
+    num_lines = sum(1 for line in open(file))
+    print(num_lines, ' to download ...')
     with open(file, "r+") as f:
         for line in f:
             file_name = directory + '/' + str(i)
@@ -72,6 +74,7 @@ def download_all(directory, file):
         os.rename(directory + '/' + name, directory + '/' + name + "." + extension)
 
     os.rename(directory, directory + ".done")
+    return len(files)
 
 
 def resize_all(path, width, height):
@@ -249,16 +252,21 @@ def _init_driver(str_driver):
             print('Driver not yet supported.')
             return
     except Exception as e:
-        print(e)
+        raise e
     print("Initialisation terminé...")
     return driver
+
+
+def count_files(path):
+    files = os.listdir(path)
+    return len(files)
 
 
 def begin_scrap(category, quality, str_driver='Chrome'):
     my_mkdir("data")
     directory_name = "data/" + category.replace(' ', '_') + "_" + quality
     file_name = category.replace(' ', '_') + "_" + quality + ".txt"
-    print(file_name, " ... ")
+    print(file_name, " ... ", end='')
     if not check_step_done("url_img", file_name):
         driver = _init_driver(str_driver)
         urls = imgur(driver, category, quality) + pexel(driver, category, quality) + ggsearch(driver, category, quality)
@@ -268,7 +276,9 @@ def begin_scrap(category, quality, str_driver='Chrome'):
     else:
         print("OK")
     if not check_step_done("download_img", directory_name):
-        download_all(directory_name, file_name)
+        nb_dl = download_all(directory_name, file_name)
+    else:
+        nb_dl = count_files(directory_name)
     # if not check_step_done("resize_img", directory_name):
     #     resize_all(directory_name, 64, 64)
-    return directory_name
+    return nb_dl

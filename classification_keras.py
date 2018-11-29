@@ -101,8 +101,10 @@ def save_model(model, path_dest):
 
 def save_scores(dest_model, model, x_test, y_test):
     score = model.evaluate(x_test, y_test, verbose=0)
-    with open("score.txt", "a+") as scores_file:
-        scores_file.write(dest_model + ' : ' + "%s: %.2f%%" % (model.metrics_names[1], score[1] * 100))
+    with open("_score.txt", "a+") as scores_file:
+        print("{} : {}"
+              .format(dest_model, "%.2f%%" % (score[1] * 100)),
+              file=scores_file)
 
 
 def gen_model(dest_model, path_data, batch_size, epochs, nb_classes):
