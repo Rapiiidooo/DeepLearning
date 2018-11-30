@@ -4,7 +4,7 @@ import urllib.request
 import time
 import magic
 from PIL import Image
-from resizeimage import resizeimage
+# from resizeimage import resizeimage
 from selenium import webdriver
 
 LIMIT = 1500
@@ -77,14 +77,14 @@ def download_all(directory, file):
     return len(files)
 
 
-def resize_all(path, width, height):
-    files = os.listdir(path)
-    for file in files:
-        with open(file, 'r+b') as f:
-            with Image.open(f) as image:
-                cover = resizeimage.resize_cover(image, [width, height])
-                cover.save(file, image.format, validate=False)
-    os.rename(path, "r_" + path)
+# def resize_all(path, width, height):
+#     files = os.listdir(path)
+#     for file in files:
+#         with open(file, 'r+b') as f:
+#             with Image.open(f) as image:
+#                 cover = resizeimage.resize_cover(image, [width, height])
+#                 cover.save(file, image.format, validate=False)
+#     os.rename(path, "r_" + path)
 
 
 def check_step_done(step, file_name):
@@ -278,7 +278,7 @@ def begin_scrap(category, quality, str_driver='Chrome'):
     if not check_step_done("download_img", directory_name):
         nb_dl = download_all(directory_name, file_name)
     else:
-        nb_dl = count_files(directory_name)
+        nb_dl = count_files(directory_name + ".done")
     # if not check_step_done("resize_img", directory_name):
     #     resize_all(directory_name, 64, 64)
     return nb_dl

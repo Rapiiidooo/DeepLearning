@@ -8,6 +8,7 @@ from keras.utils import to_categorical, np_utils
 from keras.models import Sequential
 from keras.layers import Conv2D, MaxPool2D, Flatten, Dense
 from keras.preprocessing.image import ImageDataGenerator, img_to_array, load_img
+from scraping_selenium import my_mkdir
 
 
 def generate_more_data(path_src, nb_multiplied):
@@ -20,9 +21,11 @@ def generate_more_data(path_src, nb_multiplied):
             horizontal_flip=True,
             fill_mode='nearest')
 
+    total_files = 0
     directories = os.listdir(path_src)
     for directory in directories:
         files = os.listdir(path_src + directory)
+        total_files += len(files)
         for i, file in enumerate(files):
             try:
                 format_img = magic.from_file(path_src + directory + "/" + file).partition(" ")[0].lower()
@@ -31,7 +34,7 @@ def generate_more_data(path_src, nb_multiplied):
                 x = x.reshape((1,) + x.shape)  # this is a Numpy array with shape (1, 3, 150, 150)
 
                 # the .flow() command below generates batches of randomly transformed images
-                # and saves the results to the `preview/` directory
+                # and saves the results to the path_src directory
                 j = 0
                 for batch in datagen.flow(x,
                                           batch_size=1,
@@ -44,15 +47,19 @@ def generate_more_data(path_src, nb_multiplied):
             except Exception as e:
                 print(e)
                 pass
+        files = os.listdir(path_src + directory)
+        total_files += len(files)
+    return total_files
 
 
 def iter_images(path_src, width, height):
     img_data = []
     labels = []
-
+    print("Trying to iter over the images (make datalist resized) ...")
     directories = os.listdir(path_src)
     for i, directory in enumerate(directories):
         files = os.listdir(path_src + directory)
+        print(len(files), '... ', end='')
         for file in files:
             try:
                 img = cv2.imread(path_src + directory + "/" + file)
@@ -61,6 +68,7 @@ def iter_images(path_src, width, height):
                 labels.append(i)
             except:
                 pass
+        print('OK')
     return img_data, labels
 
 
@@ -93,9 +101,11 @@ def train_model(x_train, y_train, x_test, y_test, nb_classes, batch_size, epochs
 
 
 def save_model(model, path_dest):
-    model.save(path_dest + ".h5")
+    my_mkdir('model')
+    model_dest = 'model/' + path_dest
+    model.save(model_dest + ".h5")
     model_json = model.to_json()
-    with open(path_dest + ".json", "w") as json_file:
+    with open(model_dest + ".json", "w") as json_file:
         json_file.write(model_json)
 
 

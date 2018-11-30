@@ -17,7 +17,7 @@ def print_debug(start_time, str_to_print):
 
 
 def double_data(path):
-    generate_more_data(path, 1)
+    return generate_more_data(path, 1)
 
 
 def usage():
@@ -40,44 +40,45 @@ def main(argv):
     for arg in args:
         targets.append(arg)
 
-    nb_images = 0
+    nb_img_s = 0
     for i, key in enumerate(targets):
-        targets[i] = begin_scrap(key, 'bad', 'Chrome') + '.done/'
-        nb_images += targets[i]
-    print_debug(start_time, 'to scrap images')
+        targets[i] = begin_scrap(key, 'bad', 'Chrome')
+        nb_img_s += int(targets[i])
+    print_debug(start_time, 'step scrap images')
 
     path_dataset = 'flowers/'
     path_datascrapped = 'data/'
+    nb_img_d = 4326  # initialisation avec le nombre d'image du dataset
     # Boucle pour doubler le nombre d'images 2 fois
     for j in range(3):
         if j > 0:
-            double_data(path_dataset)
-            double_data(path_datascrapped)
+            nb_img_s = double_data(path_datascrapped)
+            nb_img_d = double_data(path_dataset)
             print_debug(start_time, 'to double data')
         nb = 5
-        for i in range(6):
-            name = 'scrapped_epoch-' + str(nb) + '_size-64_images-_' + nb_images
+        for i in range(7):
+            name = 'scrapped_epoch-' + str(nb) + '_size-64_images-' + str(nb_img_s)
             gen_model(name, path_datascrapped, 64, nb, len(targets))
             nb *= 2
             print_debug(start_time, name)
 
         nb = 5
-        for i in range(6):
-            name = 'scrapped_epoch-' + str(nb) + '_size-128_images-_' + nb_images
+        for i in range(7):
+            name = 'scrapped_epoch-' + str(nb) + '_size-128_images-' + str(nb_img_s)
             gen_model(name, path_datascrapped, 128, nb, len(targets))
             nb *= 2
             print_debug(start_time, name)
 
         nb = 5
-        for i in range(6):
-            name = 'scrapped_epoch-' + str(nb) + '_size-64_images-_' + nb_images
+        for i in range(7):
+            name = 'dataset_epoch-' + str(nb) + '_size-64_images-' + str(nb_img_d)
             gen_model(name, path_dataset, 64, nb, len(targets))
             nb *= 2
             print_debug(start_time, name)
 
         nb = 5
-        for i in range(6):
-            name = 'scrapped_epoch-' + str(nb) + '_size-128_images-_' + nb_images
+        for i in range(7):
+            name = 'dataset_epoch-' + str(nb) + '_size-128_images-' + str(nb_img_d)
             gen_model(name, path_dataset, 128, nb, len(targets))
             nb *= 2
             print_debug(start_time, name)
