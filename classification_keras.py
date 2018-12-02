@@ -6,9 +6,11 @@ from keras.engine.saving import model_from_json
 from sklearn.model_selection import train_test_split
 from keras.utils import to_categorical, np_utils
 from keras.models import Sequential
-from keras.layers import Conv2D, MaxPool2D, Flatten, Dense
+from keras.layers import Conv2D, MaxPool2D, Flatten, Dense, MaxPooling2D, Dropout
 from keras.preprocessing.image import ImageDataGenerator, img_to_array, load_img
 from scraping_selenium import my_mkdir
+
+SCORE_FILE = "_score.txt"
 
 
 def generate_more_data(path_src, nb_multiplied):
@@ -42,7 +44,7 @@ def generate_more_data(path_src, nb_multiplied):
                                           save_prefix=file[:-4],
                                           save_format=format_img):
                     j += 1
-                    if j > nb_multiplied:
+                    if j >= nb_multiplied:
                         break
             except Exception as e:
                 print(e)
@@ -55,7 +57,7 @@ def generate_more_data(path_src, nb_multiplied):
 def iter_images(path_src, width, height):
     img_data = []
     labels = []
-    print("Trying to iter over the images (make datalist resized) ...")
+    print("Trying to iter over the images " + str(width) + 'x' + str(height) + " (make datalist resized) ...")
     directories = os.listdir(path_src)
     for i, directory in enumerate(directories):
         files = os.listdir(path_src + directory)
@@ -82,15 +84,36 @@ def load_model(path_src):
     return model
 
 
-def train_model(x_train, y_train, x_test, y_test, nb_classes, batch_size, epochs):
-    model = Sequential()
-    model.add(Conv2D(32, (3, 3), input_shape=(batch_size, batch_size, 3), activation='relu'))
-    model.add(MaxPool2D(pool_size=(2, 2)))
-    model.add(Flatten())
-    model.add(Dense(batch_size, activation='relu'))
-    model.add(Dense(nb_classes, activation='softmax'))
+def get_nb_model():
+    return [0, 1]
 
-    model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
+
+def train_model(x_train, y_train, x_test, y_test, nb_classes, batch_size, epochs, num_model):
+    if num_model == 0:
+        model = Sequential()
+        model.add(Conv2D(32, (3, 3), input_shape=(batch_size, batch_size, 3), activation='relu'))
+        model.add(MaxPool2D(pool_size=(2, 2)))
+        model.add(Flatten())
+        model.add(Dense(batch_size, activation='relu'))
+        model.add(Dense(nb_classes, activation='softmax'))
+        model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
+    elif num_model == 1:
+        model = Sequential()
+        model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(batch_size, batch_size, 3)))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(batch_size, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+        model.add(Flatten())
+        model.add(Dense(batch_size, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(nb_classes, activation='softmax'))
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    else:
+        print('Model number : ' + num_model + ' is not supported')
+        return
 
     model.fit(x_train, y_train,
               batch_size=batch_size,
@@ -111,13 +134,13 @@ def save_model(model, path_dest):
 
 def save_scores(dest_model, model, x_test, y_test):
     score = model.evaluate(x_test, y_test, verbose=0)
-    with open("_score.txt", "a+") as scores_file:
+    with open(SCORE_FILE, "a+") as scores_file:
         print("{} : {}"
               .format(dest_model, "%.2f%%" % (score[1] * 100)),
               file=scores_file)
 
 
-def gen_model(dest_model, path_data, batch_size, epochs, nb_classes):
+def gen_model(dest_model, path_data, batch_size, epochs, nb_classes, num_model):
     img_data, labels = iter_images(path_data, batch_size, batch_size)
 
     data = np.asarray(img_data)
@@ -137,7 +160,7 @@ def gen_model(dest_model, path_data, batch_size, epochs, nb_classes):
     if os.path.exists(dest_model):
         model = load_model(dest_model)
     else:
-        model = train_model(x_train, y_train_binary, x_test, y_test_binary, nb_classes, batch_size, epochs)
+        model = train_model(x_train, y_train_binary, x_test, y_test_binary, nb_classes, batch_size, epochs, num_model)
         save_model(model, dest_model)
     save_scores(dest_model, model, x_test, y_test_binary)
 

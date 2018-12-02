@@ -4,16 +4,39 @@ import os
 import sys
 import time
 
-from classification_keras import gen_model, generate_more_data
+from classification_keras import gen_model, generate_more_data, get_nb_model
 from scraping_selenium import begin_scrap
+
+TIMER_FILE = "_timer.txt"
+
+
+def print_time_total():
+    time_list = []
+    with open(TIMER_FILE, "r") as timer_file:
+        for line in timer_file:
+            time_list.append(line[4:11])
+
+    sum_time = datetime.timedelta()
+    for i in time_list:
+        try:
+            (h, m, s) = i.split(':')
+            d = datetime.timedelta(hours=int(h), minutes=int(m), seconds=int(s))
+            sum_time += d
+        except:
+            pass
+    with open(TIMER_FILE, "a+") as timer_file:
+        print("--- {} --- {} ---"
+              .format(sum_time, 'Total time spend.'),
+              file=timer_file)
 
 
 def print_debug(start_time, str_to_print):
     print('--- ' + str(datetime.timedelta(seconds=(time.time() - start_time))) + ' --- ' + str_to_print + ' ---')
-    with open("_timer.txt", "a+") as timer_file:
+    with open(TIMER_FILE, "a+") as timer_file:
         print("--- {} --- {} ---"
               .format(datetime.timedelta(seconds=(time.time() - start_time)), str_to_print),
               file=timer_file)
+    return time.time()
 
 
 def double_data(path):
@@ -44,44 +67,48 @@ def main(argv):
     for i, key in enumerate(targets):
         targets[i] = begin_scrap(key, 'bad', 'Chrome')
         nb_img_s += int(targets[i])
-    print_debug(start_time, 'step scrap images')
+    start_time = print_debug(start_time, 'step scrap images')
 
     path_dataset = 'flowers/'
     path_datascrapped = 'data/'
-    nb_img_d = 4326  # initialisation avec le nombre d'image du dataset
-    # Boucle pour doubler le nombre d'images 2 fois
-    for j in range(3):
-        if j > 0:
+    nb_img_d = 4326  # initialisation avec le nombre d'image du dataset en dur pour aller plus vite
+
+    size_list = [32, 64, 128]
+    model_list = get_nb_model()
+
+    for i in range(2):
+        for model in model_list:
+            for size in size_list:
+                nb = 5
+                while nb <= 320:
+                    name = 'scrapped_epoch-' + str(nb) \
+                           + '_size-' + str(size) \
+                           + '_images-' + str(nb_img_s) \
+                           + '_model-' + str(model)
+                    if os.path.exists('model/' + name + '.h5') is False:
+                        gen_model(name, path_datascrapped, size, nb, len(targets), model)
+                        start_time = print_debug(start_time, name)
+                    nb *= 2
+
+            for size in size_list:
+                nb = 5
+                while nb <= 320:
+                    name = 'dataset_epoch-' + str(nb) \
+                           + '_size-' + str(size) \
+                           + '_images-' + str(nb_img_d) \
+                           + '_model-' + str(model)
+                    if os.path.exists('model/' + name + '.h5') is False:
+                        gen_model(name, path_dataset, size, nb, len(targets), model)
+                        start_time = print_debug(start_time, name)
+                    nb *= 2
+
+        if i == 0:
             nb_img_s = double_data(path_datascrapped)
             nb_img_d = double_data(path_dataset)
-            print_debug(start_time, 'to double data')
-        nb = 5
-        for i in range(7):
-            name = 'scrapped_epoch-' + str(nb) + '_size-64_images-' + str(nb_img_s)
-            gen_model(name, path_datascrapped, 64, nb, len(targets))
-            nb *= 2
-            print_debug(start_time, name)
+            start_time = print_debug(start_time, 'to double data')
+            size_list = [32, 64]  # memory probably will not be enought
 
-        nb = 5
-        for i in range(7):
-            name = 'scrapped_epoch-' + str(nb) + '_size-128_images-' + str(nb_img_s)
-            gen_model(name, path_datascrapped, 128, nb, len(targets))
-            nb *= 2
-            print_debug(start_time, name)
-
-        nb = 5
-        for i in range(7):
-            name = 'dataset_epoch-' + str(nb) + '_size-64_images-' + str(nb_img_d)
-            gen_model(name, path_dataset, 64, nb, len(targets))
-            nb *= 2
-            print_debug(start_time, name)
-
-        nb = 5
-        for i in range(7):
-            name = 'dataset_epoch-' + str(nb) + '_size-128_images-' + str(nb_img_d)
-            gen_model(name, path_dataset, 128, nb, len(targets))
-            nb *= 2
-            print_debug(start_time, name)
+    print_time_total()
 
 
 if __name__ == '__main__':
