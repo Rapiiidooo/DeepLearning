@@ -14,3 +14,4 @@ Pip dependencies :
 - `pip install python-resize-image`
 - `pip install tensorflow` >= python3.6
 - `pip install tensorflow-gpu` <= python3.5
+- `pip install progressbar2`

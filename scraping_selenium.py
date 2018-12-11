@@ -1,13 +1,19 @@
 import os
 import os.path
-import urllib.request
 import time
+import urllib.request
+
 import magic
-from PIL import Image
-# from resizeimage import resizeimage
+import progressbar
 from selenium import webdriver
 
-LIMIT = 1500
+LIMIT = 1000
+
+
+def init_progressbar(title, valmax):
+    bar = progressbar.ProgressBar(maxval=valmax,
+                                  widgets=[progressbar.Bar('=', title + ' [', ']'), ' ', progressbar.Percentage()])
+    return bar
 
 
 def scroll_until_end(driver):
@@ -50,9 +56,10 @@ def download_all(directory, file):
     my_mkdir(directory)
     i = 0
     num_lines = sum(1 for line in open(file))
-    print(num_lines, ' to download ...')
+    bar = init_progressbar(str(num_lines-1) + ' different to download ...', num_lines)
+    bar.start()
     with open(file, "r+") as f:
-        for line in f:
+        for ibar, line in enumerate(f):
             file_name = directory + '/' + str(i)
             while os.path.exists(file_name):
                 i += 100
@@ -65,16 +72,17 @@ def download_all(directory, file):
                 else:
                     print("Error: ", line)
                     print(e)
+            bar.update(ibar+1)
             i += 1
-
+        bar.finish()
     # section rename files with right extension
     files = os.listdir(directory)
-    for name in files:
+    nb_files = len(files)
+    for i, name in enumerate(files):
         extension = magic.from_file(directory + '/' + name).partition(" ")[0].lower()
         os.rename(directory + '/' + name, directory + '/' + name + "." + extension)
-
     os.rename(directory, directory + ".done")
-    return len(files)
+    return nb_files
 
 
 # def resize_all(path, width, height):
@@ -100,10 +108,7 @@ def check_step_done(step, file_name):
 
 
 def write_in_file(file_name, dict_data):
-    # if os.path.exists(file_name) is False:
-    #     mode = "w+"
-    mode = "a+"
-    with open(file_name, mode) as text_file:
+    with open(file_name, 'a+') as text_file:
         for data in dict_data:
             print("{}".format(data), file=text_file)
         print("Step Done.", file=text_file)
@@ -112,12 +117,12 @@ def write_in_file(file_name, dict_data):
 def my_mkdir(path_name):
     try:
         os.mkdir(path_name)
-        print("Le répertoire ", path_name, " à été créer")
+        print("Le répertoire ", path_name, " à été créer.")
     except FileExistsError:
         pass
 
 
-def imgur(driver, category, file_name):
+def imgur(driver, category):
     list_url = []
     url = 'https://imgur.com/search?q=' + category
     driver.get(url)
@@ -144,8 +149,9 @@ def ggsearch(driver, category, quality='bad'):
     # ----------------------------
     if quality == 'bad':
         img_s = driver.find_elements_by_css_selector('.rg_ic.rg_i')
-        print("ggsearch : ", len(img_s) * 7, "éléments ... ", end='')
-        for img in img_s:
+        bar = init_progressbar("ggsearch : " + str(len(img_s) * 7) + " éléments ... ", len(img_s)-1)
+        bar.start()
+        for i, img in enumerate(img_s):
             try:
                 img.click()
                 card_imgs_s = driver.find_elements_by_css_selector('.irc_rii')
@@ -162,6 +168,8 @@ def ggsearch(driver, category, quality='bad'):
                     pass
             except:
                 pass
+            bar.update(i)
+        bar.finish()
     # ----------------------------
     # Fin Operation
     # ----------------------------
@@ -207,7 +215,6 @@ def ggsearch(driver, category, quality='bad'):
                         list_url.append(src)
                     except:
                         pass
-    print("OK")
     return list(set(list_url))
 
 
@@ -240,20 +247,17 @@ def pexel(driver, category, quality='bad'):
 def _init_driver(str_driver):
     try:
         if str_driver == 'PhantomJS':
-            print("Initialisation de PhantomJS...")
             driver = webdriver.PhantomJS()
         elif str_driver == 'Chrome':
-            print("Initialisation de Chrome...")
             # driver = webdriver.Chrome()  # For chrome not headless
             chrome_options = webdriver.ChromeOptions()
             chrome_options.add_argument('headless')
             driver = webdriver.Chrome(options=chrome_options)
         else:
             print('Driver not yet supported.')
-            return
+            raise Exception
     except Exception as e:
         raise e
-    print("Initialisation terminé...")
     return driver
 
 
@@ -262,19 +266,18 @@ def count_files(path):
     return len(files)
 
 
-def begin_scrap(category, quality, str_driver='Chrome'):
-    my_mkdir("data")
-    directory_name = "data/" + category.replace(' ', '_') + "_" + quality
+def begin_scrap(path_dest, category, quality='bad', str_driver='Chrome'):
+    my_mkdir(path_dest)
+    directory_name = path_dest + category.replace(' ', '_') + "_" + quality
     file_name = category.replace(' ', '_') + "_" + quality + ".txt"
-    print(file_name, " ... ", end='')
     if not check_step_done("url_img", file_name):
+        print("\nCréation de ", file_name, " ... ")
         driver = _init_driver(str_driver)
-        urls = imgur(driver, category, quality) + pexel(driver, category, quality) + ggsearch(driver, category, quality)
-        print("Total urls : ", len(urls))
+        urls = ggsearch(driver, category, quality)  # + imgur(driver, category) + pexel(driver, category, quality)
         driver.close()
         write_in_file(file_name, urls)
     else:
-        print("OK")
+        print(file_name, " ... OK")
     if not check_step_done("download_img", directory_name):
         nb_dl = download_all(directory_name, file_name)
     else:

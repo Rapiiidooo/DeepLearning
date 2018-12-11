@@ -43,70 +43,78 @@ def double_data(path):
     return generate_more_data(path, 1)
 
 
-def usage():
-    print('python3 ', os.path.basename(__file__), " [\"list\" \"of\" \"argument about the\" \"categories researched\"]")
-
-
-def main(argv):
+def usage(argv):
     try:
         opts, args = getopt.getopt(argv, "hg:d", ["help", "grammar="])
         if len(args) < 1:
-            usage()
             sys.exit(2)
     except getopt.GetoptError:
-        usage()
+        print('python3 ', os.path.basename(__file__),
+              " [\"list\" \"of\" \"argument about the\" \"categories researched\"]")
         sys.exit(2)
+    return args
+
+
+def main(argv):
+    # Check correct usage
+    args = usage(argv)
 
     start_time = time.time()
-
+    path_dataset = 'flowers/'
+    path_datascrapped = 'data/'
+    nb_img_d = 4326  # initialisation avec le nombre d'image du dataset en dur pour aller plus vite
+    size_list = [16, 32, 64, 128]
+    model_list = get_nb_model()
     targets = []
+
     for arg in args:
         targets.append(arg)
 
     nb_img_s = 0
     for i, key in enumerate(targets):
-        targets[i] = begin_scrap(key, 'bad', 'Chrome')
+        targets[i] = begin_scrap(path_datascrapped, key, 'bad', 'Chrome')
         nb_img_s += int(targets[i])
     start_time = print_debug(start_time, 'step scrap images')
 
-    path_dataset = 'flowers/'
-    path_datascrapped = 'data/'
-    nb_img_d = 4326  # initialisation avec le nombre d'image du dataset en dur pour aller plus vite
-
-    size_list = [32, 64, 128]
-    model_list = get_nb_model()
-
-    for i in range(2):
+    epoch = 1000
+    for i in range(3):
         for model in model_list:
-            for size in size_list:
-                nb = 5
-                while nb <= 320:
-                    name = 'scrapped_epoch-' + str(nb) \
-                           + '_size-' + str(size) \
-                           + '_images-' + str(nb_img_s) \
-                           + '_model-' + str(model)
-                    if os.path.exists('model/' + name + '.h5') is False:
-                        gen_model(name, path_datascrapped, size, nb, len(targets), model)
-                        start_time = print_debug(start_time, name)
-                    nb *= 2
 
+            # region For data_scrapped only
             for size in size_list:
-                nb = 5
-                while nb <= 320:
-                    name = 'dataset_epoch-' + str(nb) \
-                           + '_size-' + str(size) \
-                           + '_images-' + str(nb_img_d) \
-                           + '_model-' + str(model)
-                    if os.path.exists('model/' + name + '.h5') is False:
-                        gen_model(name, path_dataset, size, nb, len(targets), model)
-                        start_time = print_debug(start_time, name)
-                    nb *= 2
+                name = 'scrapped_epoch-' + str(epoch) \
+                       + '_size-' + str(size) \
+                       + '_images-' + str(nb_img_s) \
+                       + '_model-' + str(model)
+                if os.path.exists('model/' + name + '.h5') is False:
+                    gen_model(name, size, epoch, len(targets), model, path_datascrapped)
+                    start_time = print_debug(start_time, name)
+
+            # region For data_set only
+            for size in size_list:
+                name = 'dataset_epoch-' + str(epoch) \
+                       + '_size-' + str(size) \
+                       + '_images-' + str(nb_img_d) \
+                       + '_model-' + str(model)
+                if os.path.exists('model/' + name + '.h5') is False:
+                    gen_model(name, size, epoch, len(targets), model, path_dataset)
+                    start_time = print_debug(start_time, name)
+
+            # region both datas
+            for size in size_list:
+                name = 'databoth_epoch-' + str(epoch) \
+                       + '_size-' + str(size) \
+                       + '_images-' + str(nb_img_d + nb_img_s) \
+                       + '_model-' + str(model)
+                if os.path.exists('model/' + name + '.h5') is False:
+                    gen_model(name, size, epoch, len(targets), model, path_dataset, path_dataset)
+                    start_time = print_debug(start_time, name)
 
         if i == 0:
             nb_img_s = double_data(path_datascrapped)
             nb_img_d = double_data(path_dataset)
             start_time = print_debug(start_time, 'to double data')
-            size_list = [32, 64]  # memory probably will not be enought
+            size_list = [16, 32, 64]  # otherwise memory probably will not be enought
 
     print_time_total()
 
