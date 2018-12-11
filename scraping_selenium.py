@@ -1,5 +1,6 @@
 import os
 import os.path
+import errno
 import time
 import urllib.request
 
@@ -114,12 +115,15 @@ def write_in_file(file_name, dict_data):
         print("Step Done.", file=text_file)
 
 
-def my_mkdir(path_name):
+def my_mkdir(path):
     try:
-        os.mkdir(path_name)
-        print("Le répertoire ", path_name, " à été créer.")
-    except FileExistsError:
-        pass
+        os.makedirs(path)
+        print("Le répertoire ", path, " à été créer.")
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
 
 
 def imgur(driver, category):
