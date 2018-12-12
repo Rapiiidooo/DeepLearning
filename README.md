@@ -15,3 +15,5 @@ Pip dependencies :
 - `pip install tensorflow` >= python3.6
 - `pip install tensorflow-gpu` <= python3.5
 - `pip install progressbar2`
+
+Link for the all model generated : https://1fichier.com/?0q8ktcxddpruupwge8zj
